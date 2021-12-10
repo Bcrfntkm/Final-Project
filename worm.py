@@ -2,22 +2,61 @@ import pygame as pg
 from pygame import surfarray, sprite
 import numpy as np
 from random import randint
-from button import Button
-import config as c
-import Sprite
-import button
-import colors
-from game import Game
-from text_object import TextObject
 from datetime import datetime, timedelta
 import time
-# import os
 import sys
 
-# размер блока в пикселах
-side = 15
+import config as cfg
+import colors
+from button import Button
+from brick import Brick
+from game import Game
+from text_object import TextObject
 
 
+class Sprite(pg.sprite.Sprite):
+    """  создаём спрайт на основе поверхности """
+
+    def __init__(self, surf, pos=(0, 0), type=1):
+        super().__init__()
+        # переменные .image и .rect нужны для Group
+        self.image = surf
+        self.rect = self.image.get_rect()
+        self.rect.topleft = pos
+        self.Vx = self.Vy = 0
+        self.Fx = self.Fy = 0
+        # self.stopped=True
+        self.type = type  # 1-ground
+
+    def get_shift(self, ds, V):
+        dV = 1
+        if ds > 0:
+            V += dV
+            if V > ds: V = ds
+        elif ds < 0:
+            V -= dV
+            if V < ds: V = ds
+        else:
+            V = 0
+        return V
+
+    def move(self, x, y):
+        dx = x - self.rect.x  # distance to move for x
+        dy = y - self.rect.y  # distance to move for y
+        self.Vx = self.get_shift(dx, self.Vx)
+        self.rect.x += self.Vx
+        self.Vy = self.get_shift(dy, self.Vy)
+        self.rect.y += self.Vy
+        return (self.Vx == 0 and self.Vy == 0)
+
+    # SpriteBlock.draw(sc)
+
+    def draw(self, surf):
+        # на поверхности surf отрисовываем наш image
+        surf.blit(self.image, self.rect)
+
+    def update(self):
+        pass
 
 
 class StackGroup(pg.sprite.OrderedUpdates):
@@ -25,47 +64,93 @@ class StackGroup(pg.sprite.OrderedUpdates):
 
     def __init__(self, x, y):
         super().__init__()
+        # координаты начала воды в столбце
         self.x = x
         self.y = y
 
-    def shift_down(self):
-        global side
+    # переопределили super.update()
+    def update(self):
         y = self.y
-        for i in self.sprites():
+        for sp in self.sprites():
             # send target point for move
-            i.move(i.rect.x, y - side)
-            y = i.rect.y
-            pass
-        pass
+            sp.move(self.x,
+                    y - cfg.sprite_height)
+            y = sp.rect.y
 
 
-# ---------------------------------------breakout
+class Player():
+    """обработка действий пользователя    """
+
+    def __init__(self, worm):
+        self.worm = worm  # sprite
+        self.player_events = []
+
+    def pop_event(self):
+        if len(self.player_events):
+            return self.player_events.pop(0)
+        return False
+
+    def key_event(self, type, key):
+        self.player_events.append((type, key))
+
+    def handle_mouse_event(self, type, pos):
+        if type == pg.MOUSEBUTTONDOWN:
+            self.player_events.append((type, pos))
+
+    def update(self, n_col, groups):
+        event = self.pop_event()
+        if event:
+            if event[0] == pg.MOUSEBUTTONDOWN:
+                pos = event[1]
+                i = int(pos[0] / cfg.sprite_width)
+                if (i > 0 and i <= n_col):
+                    g = groups[i - 1]
+                    sp_list = g.sprites()
+                    for sp in sp_list:
+                        if sp.type == 1:
+                            if sp.rect.collidepoint(pos[0], pos[1]):
+                                g.remove(sp)
+                                break
+            elif event[0] == pg.KEYDOWN:
+                i = int(self.worm.rect.x / cfg.sprite_width) - 1
+                if event[1] == pg.K_LEFT:
+                    if i:
+                        groups[i].remove(self.worm)
+                        groups[i - 1].add(self.worm)
+                elif event[1] == pg.K_RIGHT:
+                    if i < (n_col - 1):
+                        groups[i].remove(self.worm)
+                        groups[i + 1].add(self.worm)
+
+
 class Worm(Game):
     def __init__(self):
         Game.__init__(self, 'Worms',
-                      c.screen_width,
-                      c.screen_height,
-                      c.background_image,
-                      c.frame_rate)
-        self.sound_effects = {name: pg.mixer.Sound(sound) for name, sound in c.sounds_effects.items()}
+                      cfg.screen_width,
+                      cfg.screen_height,
+                      cfg.background_image,
+                      cfg.frame_rate)
+        self.sound_effects = {name: pg.mixer.Sound(sound) for name, sound in cfg.sounds_effects.items()}
         self.reset_effect = None
         self.effect_start_time = None
         self.score = 0
-        self.lives = c.initial_lives
+        self.lives = cfg.initial_lives
         self.start_level = False
         self.paddle = None
         self.bricks = None
         self.ball = None
-        self.menu_buttons = []  # список кнопок
+        self.menu_buttons = []  # список кнопок для удаления из Game.objects[]
         self.is_game_running = False
-        self.create_objects()  # вызов для создания всех объектов игры
         self.points_per_brick = 1
+        self.groups = []  # хранилище групп
+        self.player = None
+        # рассчитываем количество столбцов
+        self.n_col = int(cfg.screen_width / cfg.sprite_width) - 2
+        self.water_spr = None
+        self.create_objects()  # вызов для создания всех объектов игры
 
     def create_menu(self):
         def on_play(button):
-            # при запуске игры удаляем все кнопки? нет
-            #for b in self.menu_buttons:
-            #    self.objects.remove(b)
             self.is_game_running = True
             self.start_level = True
 
@@ -75,6 +160,7 @@ class Worm(Game):
 
         def on_gun(button):
             pass  # FIXME передает определенный вид оружия конкретному червю
+
         def on_another_gun(button):
             pass  # FIXME передает другой вид оружия тому же червю
 
@@ -83,172 +169,96 @@ class Worm(Game):
                                                    ('QUIT', on_quit),
                                                    ('GUN', on_gun),
                                                    ('ANOTHER GUN', on_another_gun))):
-            b = Button(c.menu_offset_x,
-                       c.menu_offset_y + (c.menu_button_h + 5) * i,
-                       c.menu_button_w,
-                       c.menu_button_h,
+            b = Button(cfg.menu_offset_x,
+                       cfg.menu_offset_y + (cfg.menu_button_h + 5) * i,
+                       cfg.menu_button_w,
+                       cfg.menu_button_h,
                        text,
                        click_handler,
                        padding=5)
             # складируем в self.objects
-            self.objects.append(b)
-            self.menu_buttons.append(b)
-            self.mouse_handlers.append(b.handle_mouse_event)
+            self.objects.append(b)  # Game.objects[]
+            self.menu_buttons.append(b)  # память объектов - кнопок
+            self.mouse_handlers.append(b.handle_mouse_event)  # Game.mouse_handlers[]
+
+    def create_player(self):
+        # загружаем образец червяка
+        worm_img = pg.image.load(cfg.worm_image)
+        worm_surf = pg.transform.scale(worm_img, (cfg.sprite_width, cfg.sprite_height))
+        worm_rect = worm_surf.get_rect()
+        # создаём червяка
+        y = 1 * cfg.sprite_height * 2  # координата y
+        gr = randint(1, self.n_col)  # случайное число
+        x = gr * cfg.sprite_width  # координата x
+
+        self.player = Player(Sprite(worm_surf, (x, y), type=2))
+        self.mouse_handlers.append(self.player.handle_mouse_event)
+        self.groups[gr - 1].add(self.player.worm)
+
+        self.keydown_handlers[pg.K_LEFT].append(self.player.key_event)
+        self.keydown_handlers[pg.K_RIGHT].append(self.player.key_event)
 
     def create_ground(self):
         # загружаем образец грунта
-        ground_img = pg.image.load('ground.png')
-        ground_surf = pg.transform.scale(ground_img, (15, 15))
-        ground_rect = ground_surf.get_rect(bottomright=(c.screen_width, c.screen_height))
-
-        # загружаем образец червяка
-        worm_img = pg.image.load('worm.png')
-        worm_surf = pg.transform.scale(worm_img, (15, 15))
-        worm_rect = worm_surf.get_rect(bottomright=(c.screen_width, c.screen_height))
-
-        # рассчитываем количество столбцов
-        n_col = int(c.screen_width / side) - 2
+        ground_img = pg.image.load(cfg.ground_image)
+        ground_surf = pg.transform.scale(ground_img, (cfg.sprite_width, cfg.sprite_height))
+        ground_rect = ground_surf.get_rect()
         # создаём sprite "вода" (прямоугольник, поверхность, спрайт)
-        water_rect = pg.Rect(side, c.screen_height - 2 * side, side * n_col, side)
+        water_rect = pg.Rect(cfg.sprite_width,
+                             cfg.screen_height - 2 * cfg.sprite_height,
+                             cfg.sprite_width * self.n_col,
+                             cfg.sprite_height)
         water_surf = pg.Surface(water_rect.size)
         water_surf.fill((100, 150, 200))
-        # water_spr=SpriteBlock(water_surf,(side,H-2*side))
-        #        sc.blit(water_surf, water_rect)
+        self.water_spr = Sprite(water_surf, (cfg.sprite_width, cfg.screen_height - 2 * cfg.sprite_height))
+        self.objects.append(self.water_spr)
         # создаём группы по количеству столбцов
-        for i in range(n_col):
-            self.groups.append(StackGroup(water_rect.x, water_rect.y))
+        for i in range(self.n_col):
+            self.groups.append(StackGroup(water_rect.x + i * cfg.sprite_width,
+                                          water_rect.y))
+            # переносим все группы в self.objects, чтобы класс Game отрисовывал их
+            self.objects.append(self.groups[i])
         # генерируем в случайном порядке блоки и раскладываем их по группам.
         rows = 6
-        nb = n_col * 3
+        nb = self.n_col * 3
         rnd = []  # защита от совпадений
         while nb:
-            y = (rows + 1) * side * 2  # координата y
+            y = (rows + 1) * cfg.sprite_height * 2  # координата y
             rnd.clear()
             for i in range(round(nb / rows)):
-                grp = randint(1, n_col)  # случайное число
+                grp = randint(1, self.n_col)  # случайное число
                 while grp in rnd:
                     grp += 1
-                    if grp > n_col:
+                    if grp > self.n_col:
                         grp = 1
                 rnd.append(grp)
-                x = grp * side  # координата x
-                self.groups[grp - 1].add(Sprite.Sprite(ground_surf, (x, y), type=1))
+                x = grp * cfg.sprite_width  # координата x
+                self.groups[grp - 1].add(Sprite(ground_surf, (x, y), type=1))
             rows -= 1
             nb -= i + 1
         del rnd
-        # создаём червяка
-        y = 1 * side * 2  # координата y
-        grp = randint(1, n_col)  # случайное число
-        x = grp * side  # координата x
-        self.groups[grp - 1].add(Sprite.Sprite(worm_surf, (x, y), type=2))
 
     def create_objects(self):
+        # self.create_bricks()
+        # self.create_paddle()
+        # self.create_ball()
+        # self.create_labels()
         self.create_ground()
+        self.create_player()
         self.create_menu()
 
     def add_life(self):
         self.lives += 1
 
-    def set_points_per_brick(self, points):
-        self.points_per_brick = points
-
-    def change_ball_speed(self, dy):
-        self.ball.speed = (self.ball.speed[0], self.ball.speed[1] + dy)
-
-    def handle_ball_collisions(self):
-        def intersect(obj, ball):
-            edges = dict(left=Rect(obj.left, obj.top, 1, obj.height),
-                         right=Rect(obj.right, obj.top, 1, obj.height),
-                         top=Rect(obj.left, obj.top, obj.width, 1),
-                         bottom=Rect(obj.left, obj.bottom, obj.width, 1))
-            collisions = set(edge for edge, rect in edges.items() if ball.bounds.colliderect(rect))
-            if not collisions:
-                return None
-
-            if len(collisions) == 1:
-                return list(collisions)[0]
-
-            if 'top' in collisions:
-                if ball.centery >= obj.top:
-                    return 'top'
-                if ball.centerx < obj.left:
-                    return 'left'
-                else:
-                    return 'right'
-
-            if 'bottom' in collisions:
-                if ball.centery >= obj.bottom:
-                    return 'bottom'
-                if ball.centerx < obj.left:
-                    return 'left'
-                else:
-                    return 'right'
-
-        # Hit paddle
-        s = self.ball.speed
-        edge = intersect(self.paddle, self.ball)
-        if edge is not None:
-            self.sound_effects['paddle_hit'].play()
-        if edge == 'top':
-            speed_x = s[0]
-            speed_y = -s[1]
-            if self.paddle.moving_left:
-                speed_x -= 1
-            elif self.paddle.moving_left:
-                speed_x += 1
-            self.ball.speed = speed_x, speed_y
-        elif edge in ('left', 'right'):
-            self.ball.speed = (-s[0], s[1])
-
-        # Hit floor
-        if self.ball.top > c.screen_height:
-            self.lives -= 1
-            if self.lives == 0:
-                self.game_over = True
-            else:
-                self.create_ball()
-
-        # Hit ceiling
-        if self.ball.top < 0:
-            self.ball.speed = (s[0], -s[1])
-
-        # Hit wall
-        if self.ball.left < 0 or self.ball.right > c.screen_width:
-            self.ball.speed = (-s[0], s[1])
-
-        # Hit brick
-        for brick in self.bricks:
-            edge = intersect(brick, self.ball)
-            if not edge:
-                continue
-
-            self.sound_effects['brick_hit'].play()
-            self.bricks.remove(brick)
-            self.objects.remove(brick)
-            self.score += self.points_per_brick
-
-            if edge in ('top', 'bottom'):
-                self.ball.speed = (s[0], -s[1])
-            else:
-                self.ball.speed = (-s[0], s[1])
-
-            if brick.special_effect is not None:
-                # Reset previous effect if any
-                if self.reset_effect is not None:
-                    self.reset_effect(self)
-
-                # Trigger special effect
-                self.effect_start_time = datetime.now()
-                brick.special_effect[0](self)
-                # Set current reset effect function
-                self.reset_effect = brick.special_effect[1]
+    # def set_points_per_brick(self, points):  self.points_per_brick = points
+    # def change_ball_speed(self, dy):          self.ball.speed = (self.ball.speed[0], self.ball.speed[1] + dy)
 
     def show_message(self, text, color=colors.WHITE, font_name='Arial', font_size=20, centralized=False):
-        message = TextObject(c.screen_width // 2, c.screen_height // 2, lambda: text, color, font_name, font_size)
+        message = TextObject(cfg.screen_width // 2, cfg.screen_height // 2, lambda: text, color, font_name, font_size)
         self.draw()
         message.draw(self.surface, centralized)
         pg.display.update()
-        time.sleep(c.message_duration)
+        time.sleep(cfg.message_duration)
 
     # update Worm then Game
     def update(self):
@@ -259,13 +269,10 @@ class Worm(Game):
             self.start_level = False
             self.show_message('GET READY!', centralized=True)
 
+        # Game.objects[].update
+        self.player.update(self.n_col, self.groups)
         super().update()
-        # рисуем все блоки
-        for i in self.groups:
-            i.draw(self.surface)
-
-        if self.game_over:
-            self.show_message('GAME OVER!', centralized=True)
+        if self.game_over:            self.show_message('GAME OVER!', centralized=True)
 
 
 def main():
@@ -274,22 +281,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-# pg.init()
-# sc = pg.display.set_mode((c.screen_width,
-#                                           c.screen_height))
-# while 1:
-#     for i in pg.event.get():
-#         if i.type == pg.QUIT:
-#             sys.exit()
-#     # рисуем все блоки
-#     sc.fill((0x8003B8))
-#     sc.blit(water_surf, water_rect)
-#     # в каждой группе перебираем все спрайты и сдвигаем, если нужно
-#     for i in groups:
-#         i.shift_down()
-#         i.draw(sc)
-#     pg.display.update()
-#
-#     pg.time.delay(20)
-# pg.quit()
