@@ -1,6 +1,6 @@
 import colors
 
-screen_width = 800
+screen_width = 1000
 screen_height = 600
 background_image = 'images/background.jpg'
 
@@ -42,20 +42,24 @@ sounds_effects = dict(
 )
 
 button_pictures = {
-    'PLAY': 'ground.png',
-    'QUIT': 'ground.png',
-    'GUN': 'ground.png',
-    'ANOTHER GUN': 'ground.png'
+    'PLAY': 'images/play.png',
+    'QUIT': 'images/quit.png',
+    'GUN': 'images/gun.png',
+    'ANOTHER GUN': 'images/bomb.png'
 }
-
-message_duration = 2
+message_duration = 1
 
 button_text_color = colors.WHITE,
-button_normal_back_color = colors.INDIANRED1
-button_hover_back_color = colors.INDIANRED2
+button_normal_back_color  = colors.INDIANRED1
+button_hover_back_color    = colors.INDIANRED2
 button_pressed_back_color = colors.INDIANRED3
 
-menu_offset_x = 20
-menu_offset_y = 300
-menu_button_w = 80
-menu_button_h = 50
+menu_button_w = 60
+menu_button_h = 40
+menu_offset_y = 20
+menu_offset_x = screen_width-menu_button_w-menu_offset_y
+
+sprite_width =20
+sprite_height =20
+ground_image = 'images/ground.png'
+worm_image = 'images/worm.png'

@@ -1,11 +1,14 @@
 import pygame
 import sys
+import config as cfg
 
 from collections import defaultdict
 
 class Game:
     def __init__(self, caption, width, height, back_image_filename, frame_rate):
-        self.background_image = pygame.image.load(back_image_filename)
+        self.background_image_1 = pygame.image.load(back_image_filename)
+        self.background_image = pygame.transform.scale(self.background_image_1, (cfg.screen_width,cfg.screen_height ))
+
         self.frame_rate = frame_rate
         self.game_over = False
         self.objects = [] # объекты игры .update(.move), .draw
@@ -20,18 +23,13 @@ class Game:
         self.keydown_handlers = defaultdict(list)
         self.keyup_handlers = defaultdict(list)
         self.mouse_handlers = []
-        self.groups=[] # хранилище групп
 
     def update(self):
         for o in self.objects:
             o.update()
-        for o in self.groups:
-            o.shift_down()
 
     def draw(self):
         for o in self.objects:
-            o.draw(self.surface)
-        for o in self.groups:
             o.draw(self.surface)
 
     def handle_events(self):
@@ -41,13 +39,16 @@ class Game:
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
                 for handler in self.keydown_handlers[event.key]:
-                    handler(event.key)
+                    handler(event.type,event.key)
             elif event.type == pygame.KEYUP:
                 for handler in self.keyup_handlers[event.key]:
-                    handler(event.key)
-            elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION):
+                    handler(event.type,event.key)
+            elif event.type in (pygame.MOUSEBUTTONDOWN,
+                                         pygame.MOUSEBUTTONUP,
+                                         pygame.MOUSEMOTION):
                 for handler in self.mouse_handlers:
-                    handler(event.type, event.pos)
+                    handler(event.type,
+                                 event.pos)
 
     def run(self):
         while not self.game_over:
