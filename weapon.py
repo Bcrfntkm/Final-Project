@@ -7,6 +7,11 @@ import config as c
 
 class Weapon:
     def __init__(self, surface):
+        '''класс оружия будет хранить в себе координаты, которые сначала будут координатами пушки, а потом координатами "пули"
+        скорости пули
+        цвет (тоже будет для пушки и пули менятся)
+        сила заряда выстрела (для ружья не используется)
+        угол выстрела'''
         self.surface = surface
         self.x = 0
         self.y = 0
@@ -23,10 +28,12 @@ class Weapon:
         pass
 
     def get_angle(self, x, y):
+        '''планируется, что будут получаться координаты из прицеливания'''
         self.an = math.atan((self.y-y) / (self.x-x))
         self.tagetting_state = True
 
     def draw_power_bar(self):
+        '''полоска,отображающая силу заряда выстрела (для базуки, например)'''
         width = 10
         coords = [
             (self.x, self.y),
@@ -39,9 +46,11 @@ class Weapon:
         polygon(self.screen, self.color, (coords), width=0)
 
     def fire(self):
+        '''передаёт скорость в момент выстрела пуле'''
         pass
 
     def draw(self):
+        '''в зависимости от состояния, тут либо отрисовка силы заряда, либо орисовка пули/снаряда'''
         if self.tagetting_state:
             self.draw_power_bar()
         elif self.fire_state:
@@ -49,12 +58,12 @@ class Weapon:
         else:
             pass
 
-    def draw_bullet(self):
+    def draw_bullet(self): #рисуетяс пуля, при этом скорости тут же меняются
         pass
 
-    def collision(self, bricks):
+    def collision(self, bricks): #проверка столкновения с блоками
         pass
-    def on_hit(self, worms):
+    def on_hit(self, worms): #проверка столкновения с червяком
         pass
 
 
