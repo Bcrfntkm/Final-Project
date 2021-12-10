@@ -1,5 +1,6 @@
 import pygame as pg
 from pygame import surfarray, sprite
+from pygame.rect import Rect
 import numpy as np
 from random import randint
 from button import Button
