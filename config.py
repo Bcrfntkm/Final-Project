@@ -29,8 +29,8 @@ lives_right_offset = 85
 lives_offset = screen_width - lives_right_offset
 score_offset = 5
 
-font_name = 'Arial'
-font_size = 20
+font_name = 'Tahoma'
+font_size = 15
 
 effect_duration = 20
 
@@ -62,4 +62,12 @@ menu_offset_x = screen_width-menu_button_w-menu_offset_y
 sprite_width =20
 sprite_height =20
 ground_image = 'images/ground.png'
-worm_image = 'images/worm.png'
+worm_image_1 = 'images/worm1.png'
+worm_image_2 = 'images/worm2.png'
+player_image_1 = 'images/player1.png'
+player_image_2 = 'images/player2.png'
+gun_image='images/G.png'
+bullet_image='images/.bullet.png'
+gun2_image='images/B.png'
+bullet2_image='images/.Gr.png'
+
