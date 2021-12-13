@@ -109,31 +109,32 @@ class Gun(Weapon):
             self.fire_state = True
 
     def hit(self, bricks, worms):
+        #вылет за экран
         if self.x > c.screen_width + 50 or self.x < c.screen_width - 50 or self.y > c.screen_height + 50 or self.y < c.screen_height:
-            self.fire_state = False
+            self.fire_state = False        
         else:
+            #попадание по червяку, отнимает у него одну жизнь
             for worm in worms:
                 if (worm.rect.left < self.x < worm.rect.right and worm.rect.top < self.y < worm.rect.bottom):
                     worm.lives -= 1
                     self.fire_state = False
                     return
+            #попадание по блоку, убирает блок из списка блоков
             for brick in bricks:
-                # FIXME проверка на столкновение с каждым объектом рельефа
-                # если будет попадание по кирпичику, то нужен какой-то brick.remove()
-                '''
-                if brick is on hit:
-                    brick.remove()
+                if (brick.rect.left < self.x < brick.rect.right and brick.rect.top < self.y < brick.rect.bottom):
+                    bricks.pop(bricks.index(brick))
                     self.fire_state = False
                     return
-                '''
-                pass
 
 class Bazooka(Weapon):
     def __init__(self, surface):
         super().__init__(self, surface)
-        #координаты для удобства (см. draw_bullet)
+
+        #координаты центра передней части снаряда для удобства (см. draw_bullet)
         self.col_x = self.x
         self.col_y = self.y
+
+        self.range = 2500 #радиус поражения в квадрате
 
     def draw_bullet(self):
         width = 20
@@ -161,40 +162,34 @@ class Bazooka(Weapon):
             self.fire_state = True
 
     def hit(self, bricks, worms):
+        #вылет за экран
         if self.x > c.screen_width + 50 or self.x < c.screen_width - 50 or self.y > c.screen_height + 50 or self.y < c.screen_height:
             self.fire_state = False
         else:
+            #попадание по червяку,отнимает жизни у всех червей по близости, а также убирает все блоки по близости из списка блоков
             for worm in worms:
                 if (worm.rect.left < self.col_x < worm.rect.right and worm.rect.top < self.col_y < worm.rect.bottom):
                     for close_worm in worms:
-                        if close_worm != worm and (worm.rect.centerx - close_worm.rect.centerx)**2 + (worm.rect.centery - close_worm.rect.centery)**2 < 2500:
-                            close_worm.lives -=1
-                        '''
-                        for close_brick in bricks:
-                            if close_brick is close to worm:
-                                close_brick.remove()
-                        '''
-                        worm.lives -= 1
-                        self.fire_state = False
-                        return
-
-            for brick in bricks:
-                # FIXME проверка на столкновение с каждым объектом рельефа
-                # если будет попадание по кирпичику, то нужен какой-то brick.remove()
-                # также проверяется, есть ли рядом блоки,которые уберутся,или червяки, которых заденет
-                '''
-                if brick is on hit:
-                    for close_worm in worms:
-                        if close_worm is close to brick:
-                            close_worm.damage()
+                        if close_worm != worm and (worm.rect.centerx - close_worm.rect.centerx)**2 + (worm.rect.centery - close_worm.rect.centery)**2 < self.range:
+                            close_worm.lives -=1                        
                     for close_brick in bricks:
-                        if close_brick is close to brick and close_brick != brick:
-                            close_brick.remove()
-                    brick.remove()                    
-                    self.fire_state = False
-                    return
-                '''
-                pass           
+                        if (worm.rect.centerx - close_brick.rect.centerx)**2 + (worm.rect.centery - close_brick.rect.centery)**2 < self.range:
+                            bricks.pop(bricks.index(close_brick))
+                worm.lives -= 1
+                self.fire_state = False
+                return
+            #попадание по блоку, отнимает жизни у всех червей поблизости и убирает все блоки по близости из списка блоков
+            for brick in bricks:
+                if (brick.rect.left < self.col_x < brick.rect.right and brick.rect.top < self.col_y < brick.rect.bottom):
+                    for close_worm in worms:
+                        if (brick.rect.centerx - close_worm.rect.centerx)**2 + (brick.rect.centery - close_worm.rect.centery)**2 < self.range:
+                            close_worm.lives -=1
+                    for close_brick in bricks:
+                        if close_brick != brick and (brick.rect.centerx - close_brick.rect.centerx)**2 + (brick.rect.centery - close_brick.rect.centery)**2 < self.range:
+                            bricks.pop(bricks.index(close_brick))
+                bricks.pop(bricks.index(brick))
+                self.fire_state = False
+                return        
     
 
 
