@@ -113,16 +113,10 @@ class Gun(Weapon):
             self.fire_state = False
         else:
             for worm in worms:
-                # FIXME проверка на столкновение с каждым червяком
-                # если будет попадание по червяку, то нужен какой-то worm.damage()
-                '''
-                if worm is on hit:
-                    worm.damage()
+                if (worm.rect.left < self.x < worm.rect.right and worm.rect.top < self.y < worm.rect.bottom):
+                    worm.lives -= 1
                     self.fire_state = False
                     return
-                '''
-                pass
-
             for brick in bricks:
                 # FIXME проверка на столкновение с каждым объектом рельефа
                 # если будет попадание по кирпичику, то нужен какой-то brick.remove()
@@ -135,6 +129,11 @@ class Gun(Weapon):
                 pass
 
 class Bazooka(Weapon):
+    def __init__(self, surface):
+        super().__init__(self, surface)
+        #координаты для удобства (см. draw_bullet)
+        self.col_x = self.x
+        self.col_y = self.y
 
     def draw_bullet(self):
         width = 20
@@ -146,6 +145,8 @@ class Bazooka(Weapon):
              self.y+(50)*math.sin(self.an)-width*math.cos(self.an)),
             (self.x+width*math.sin(self.an), self.y-width*math.cos(self.an))
         ]
+        self.col_x = (self.x+(50)*math.cos(self.an)+self.x+(50)*math.cos(self.an)+width*math.sin(self.an))/2
+        self.col_y = (self.y+(50)*math.sin(self.an)+self.y+(50)*math.sin(self.an)-width*math.cos(self.an))/2
         self.x += self.vx
         self.y += self.vy
         self.an = math.atan(self.vy / self.vx) #не уверен, правильно ли так будет, это для наклона в воздухе
@@ -164,23 +165,17 @@ class Bazooka(Weapon):
             self.fire_state = False
         else:
             for worm in worms:
-                # FIXME проверка на столкновение с каждым червяком
-                # если будет попадание по червяку, то нужен какой-то worm.damage()
-                # также проверяется, есть ли рядом блоки,которые уберутся,или червяки, которых заденет
-                '''
-                if worm is on hit:
-                    for close_worms in worms:
-                        if close_worm is close to worm and close_worm != worm:
-                            close_worm.damage()
-                        
-                    for close_brick in bricks:
-                        if close_brick is close to worm:
-                            close_brick.remove()
-
-                    worm.damage()
-                    self.fire_state = False
-                    return
-                '''
+                if (worm.rect.left < self.col_x < worm.rect.right and worm.rect.top < self.col_y < worm.rect.bottom):
+                    for close_worm in worms:
+                        if close_worm != worm and (worm.rect.centerx - close_worm.rect.centerx)**2 + (worm.rect.centery - close_worm.rect.centery)**2 < 2500:
+                            close_worm.lives -=1
+                        '''
+                        for close_brick in bricks:
+                            if close_brick is close to worm:
+                                close_brick.remove()
+                        '''
+                        worm.lives -= 1
+                        return
                 pass
 
             for brick in bricks:
