@@ -175,8 +175,8 @@ class Bazooka(Weapon):
                                 close_brick.remove()
                         '''
                         worm.lives -= 1
+                        self.fire_state = False
                         return
-                pass
 
             for brick in bricks:
                 # FIXME проверка на столкновение с каждым объектом рельефа
