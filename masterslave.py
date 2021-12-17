@@ -1,5 +1,5 @@
 import pygame as pg
-from SpriteGroup import *
+from sprite_group import *
 import config as cfg
 
 class Master(): #Player/Weapon
