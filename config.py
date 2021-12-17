@@ -42,10 +42,10 @@ sounds_effects = dict(
 )
 
 button_pictures = {
-    'PLAY': 'images/play.png',
-    'QUIT': 'images/quit.png',
-    'GUN': 'images/gun.png',
-    'ANOTHER GUN': 'images/bomb.png'
+    'PLAY': 'images/Play.png',
+    'QUIT': 'images/Quit.png',
+    'GUN': 'images/Gun.png',
+    'ANOTHER GUN': 'images/Bomb.png'
 }
 message_duration = 1
 
@@ -64,10 +64,10 @@ sprite_height =20
 ground_image = 'images/ground.png'
 worm_image_1 = 'images/worm1.png'
 worm_image_2 = 'images/worm2.png'
-player_image_1 = 'images/player1.png'
-player_image_2 = 'images/player2.png'
+player_image_1 = 'images/Player1.png'
+player_image_2 = 'images/Player2.png'
 gun_image='images/G.png'
-bullet_image='images/bullet.png'
+bullet_image='images/Bullet.png'
 gun2_image='images/B.png'
 bullet2_image='images/Gr.png'
 

@@ -13,6 +13,7 @@ import colors
 from button import Button
 from game import Game
 from text_object import TextObject
+import weapon as wp
 groups=[]
 class Weapon(Master):
     def __init__(self,master_file,master_size,
@@ -42,6 +43,7 @@ class Player(Master):
         for i in range(slave_number):
             self.make_slave((self.pos[0] - self.slave_rect.width / 2,
                                      self.pos[1] + cfg.menu_button_h + self.slave_rect.height * i))
+        self.can_move = True
     def make_slave(self, pos):
         slave=super().make_slave(pos)
         self.stack_group.add(slave)
@@ -72,24 +74,11 @@ class Player(Master):
         event = self.pop_event()
         if event:
             if event[0] == pg.MOUSEBUTTONDOWN:
-                pos = event[1]
                 self.down_flag=True
-                self.line_end=pos
-                self.line_begin[0]=self.slaves[self.selected_slave].rect.centerx
-                self.line_begin[1]=self.slaves[self.selected_slave].rect.centery
-                i = int(pos[0] / cfg.sprite_width)
-                if (i > 0 and i <= len(groups)):
-                    g = groups[i - 1]
-                    sp_list = g.sprites()
-                    for sp in sp_list:
-                        if sp.type == 1:
-                            if sp.rect.collidepoint(pos[0], pos[1]):
-                                g.remove(sp)
-                                break
             elif event[0] == pg.MOUSEBUTTONUP:
                 self.down_flag=False
-                self.slaves[self.selected_slave].weapon.make_slave(self.line_end,self.line_begin)
-            elif event[0] == pg.KEYDOWN:
+                #self.slaves[self.selected_slave].weapon.make_slave(self.line_end,self.line_begin)
+            elif event[0] == pg.KEYDOWN and self.can_move:
                 worm=self.slaves[self.selected_slave]
                 i = int(worm.rect.x / cfg.sprite_width) - 1
                 if event[1] == pg.K_LEFT:
@@ -102,16 +91,39 @@ class Player(Master):
                     if i < len(groups)-1:
                         groups[i].remove(worm)
                         groups[i+1].add(worm)
+                elif event[1] == pg.K_UP:
+                    if (len(self.slaves) > 1):
+                        prev = self.selected_slave
+                        self.selected_slave = (self.selected_slave + 1) % len(self.slaves)
+                        self.slaves[prev].selected = False
+                        self.slaves[self.selected_slave].selected = True                        
+                        self.slaves[prev].update_image = True
+                        self.slaves[self.selected_slave].update_image = True
+                elif event[1] == pg.K_DOWN:
+                    if (len(self.slaves) > 1):
+                        prev = self.selected_slave
+                        num = self.selected_slave - 1
+                        if (num < 0):
+                            self.selected_slave = len(self.slaves) - 1
+                        else:
+                            self.selected_slave = num % len(self.slaves)
+                        self.slaves[prev].selected = False
+                        self.slaves[self.selected_slave].selected = True                        
+                        self.slaves[prev].update_image = True
+                        self.slaves[self.selected_slave].update_image = True
+
 
     def draw(self,surf):
         if self.down_flag==True:
-            pg.draw.line(surf,(0xFF,0xFF,0xFF),(self.line_begin[0],self.line_begin[1]),self.line_end)
+            pass
+            #pg.draw.line(surf,(0xFF,0xFF,0xFF),(self.line_begin[0],self.line_begin[1]),self.line_end)
         pass
     def set_weapon_default(self,weapon):
         for i in range(len(self.slaves)):
                 self.slaves[i].set_weapon(weapon)
     def set_weapon_active_slave(self,weapon):
-         self.slaves[self.selected_slave].set_weapon(weapon)
+        if len(self.slaves):
+            self.slaves[self.selected_slave].set_weapon(weapon)
     def activate(self,On):
         size=len(self.slaves)
         if size:
@@ -142,6 +154,7 @@ class Worm(Game):
         self.water_spr=None
         self.weapons=[]
         self.selected_weapon=0
+        self.fire_start = False
         self.create_objects() # вызов для создания всех объектов игры
     def key_event(self, type, key):
             self.players[self.selected_player].push_event(type, key)
@@ -165,6 +178,14 @@ class Worm(Game):
         if type in (pg.MOUSEBUTTONDOWN,
                        pg.MOUSEBUTTONUP):
             self.players[self.selected_player].push_event(type, pos)
+            if type == pg.MOUSEBUTTONDOWN:
+                if (self.is_game_running):
+                    self.weapons[self.selected_weapon].get_angle(self.players[self.selected_player].slaves[self.players[self.selected_player].selected_slave], pos[0], pos[1], groups)
+            if type == pg.MOUSEBUTTONUP:
+                if (self.is_game_running and self.selected_weapon == 1):
+                    self.weapons[self.selected_weapon].fire()
+
+
 
     def create_menu(self):
         def on_play(button):
@@ -200,14 +221,9 @@ class Worm(Game):
             self.objects.append(b) #Game.objects[]
             self.menu_buttons.append(b) # память объектов - кнопок
     #        self.mouse_handlers.append(b.handle_mouse_event) #Game.mouse_handlers[]
-    def create_weapon(self):
-        master_size=(int(cfg.sprite_width),int(cfg.sprite_height/2))
-        slave_size=(int(cfg.sprite_width/2),int(cfg.sprite_height/2))
-        for i, (master,slave) in enumerate(((cfg.gun_image,cfg.bullet_image),
-                                                           (cfg.gun2_image, cfg.bullet2_image))):
-            weapon=Weapon(master,master_size, slave,slave_size)
-            self.weapons.append(weapon)
-            self.objects.append(weapon.slaves_group)
+    def create_weapon(self):        
+        self.weapons.append(wp.Gun(self.surface))
+        self.weapons.append(wp.Bazooka(self.surface))
 
     def create_player(self,weapon):
         master_size =(cfg.menu_button_w*2,cfg.menu_button_h)
@@ -228,6 +244,8 @@ class Worm(Game):
         self.mouse_handlers.append(self.handle_mouse_event)
         self.keydown_handlers[pg.K_LEFT].append(self.key_event)
         self.keydown_handlers[pg.K_RIGHT].append(self.key_event)
+        self.keydown_handlers[pg.K_UP].append(self.key_event)
+        self.keydown_handlers[pg.K_DOWN].append(self.key_event)
 
     def create_ground(self):
         # загружаем образец грунта
@@ -312,6 +330,40 @@ class Worm(Game):
                 self.selected_player=self.selected_player^1
                 self.players[self.selected_player].stack_group.add(sp)
                 self.players[self.selected_player].activate(True)
+    def kill_players(self, player):
+        #берёт список убитых червяков из оружия и обрабатывает его
+        for weapon in self.weapons:
+            for worm in weapon.killed_worms:
+                dict = pg.sprite.spritecollide(worm, self.players[player].slaves_group, True, False)
+                if len(dict):
+                    for sp in dict:
+                        sp.kill()  # удаляем из всех групп
+                        # переносим в bad_slaves
+                        self.players[player].kill_slave(sp)
+                        self.players[player ^ 1].stack_group.add(sp)
+                    if player==self.selected_player:
+                        self.players[player].activate(True)
+    def block_movement(self):
+        # не даёт двигаться активному червю, если происходит выстрел, а также передаёт ход после выстрела
+        if not self.fire_start:
+            for weapon in self.weapons:
+                if not weapon.fire_end():
+                    self.fire_start = True
+                    self.players[self.selected_player].can_move = False
+                    break
+        if self.fire_start:
+            if self.weapons[0].fire_end() and self.weapons[1].fire_end():
+                self.fire_start = False
+                self.players[self.selected_player].can_move = True
+                self.players[self.selected_player].activate(False)
+                self.selected_player=self.selected_player^1                
+                self.players[self.selected_player].activate(True)
+    def weapon_update(self):
+        if len(self.players):
+            self.players[self.selected_player].set_weapon_active_slave(self.weapons[self.selected_weapon])
+            self.players[self.selected_player].slaves[self.players[self.selected_player].selected_slave].update_image = True
+
+
     def update(self):
         # выход сразу, если игра не запущена (on_play/on_quit)
         if not self.is_game_running:         return
@@ -328,11 +380,19 @@ class Worm(Game):
             self.show_message('PLAYER 1- WINNER!!!', centralized=True)
             self.is_game_running = False  # стоп игра
            # self.game_over = True
-        #self.handle_ball_collisions()
+        #self.handle_ball_collisions()        
+        self.weapon_update()
+        self.block_movement()
         self.collide_players() #ищем столкновения между червями разных игроков
         # ищем столкновения между червями разных игроков и водой
         self.collide_player_water(self.selected_player)
         self.collide_player_water(self.selected_player^1)
+        self.kill_players(self.selected_player)
+        self.kill_players(self.selected_player^1)
+        self.weapons[self.selected_weapon].draw(groups)
+        
+        
+
         super().update()
         if self.game_over:            self.show_message('GAME OVER!', centralized=True)
 

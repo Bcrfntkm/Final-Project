@@ -1,9 +1,10 @@
 from pygame import surface
 import colors
-import pygame
+import pygame as pg
 from pygame.draw import *
 import math
 import config as c
+from worm import Player as pl
 
 
 '''
@@ -29,22 +30,56 @@ class Weapon:
         self.y = 0
         self.vx = 0
         self.vy = 0
-        self.color = colors.GRAY
         self.f_power = 10
         self.an = 1
+
+        self.strike_back = False
 
         self.tagetting_state = False
         self.fire_state = False
 
+        self.active_worm = []
+        self.killed_worms = []
+
+        self.shoot_up = True
+
+
+    def fire_end(self):
+        if (not self.tagetting_state and not self.fire_state):
+            return True
+        else:
+            return False
 
     def get_pos(self, worm):
         self.x = worm.rect.centerx
         self.y = worm.rect.centery
 
-    def get_angle(self, worm, x, y):
+    def get_angle(self, worm, x, y, groups):
+        if (self.tagetting_state or self.fire_state):
+            return
         '''планируется, что будут получаться координаты из прицеливания'''
+        self.killed_worms = []
         self.get_pos(worm)
-        self.an = math.atan((self.y-y) / (self.x-x))
+        if (self.x - x > 0):
+            self.strike_back = True
+        else:
+            self.strike_back = False
+        if (self.x-x == 0):
+            if (self.y - y > 0):
+                self.an = - math.pi/2
+            else:
+                self.an = math.pi/2
+        else:
+            self.an = math.atan((self.y-y) / (self.x-x))
+        
+        i = int(self.x / c.sprite_width)
+        if (i > 0 and i <= len(groups)):
+            g = groups[i - 1]
+            sp_list = g.sprites()
+            for sp in sp_list:
+                if sp.type == 2:
+                    if sp.rect.collidepoint(self.x, self.y):
+                        self.active_worm.append(sp)
         self.tagetting_state = True
         
 
@@ -52,46 +87,65 @@ class Weapon:
         '''полоска,отображающая силу заряда выстрела (для базуки, например)'''
         if (self.f_power < 50):
             self.f_power += 1
-        width = 10
-        coords = [
-            (self.x, self.y),
-            (self.x+(self.f_power+20)*math.cos(self.an),
-             self.y+(self.f_power+20)*math.sin(self.an)),
-            (self.x+(self.f_power+20)*math.cos(self.an)+width*math.sin(self.an),
-             self.y+(self.f_power+20)*math.sin(self.an)-width*math.cos(self.an)),
-            (self.x+width*math.sin(self.an), self.y-width*math.cos(self.an))
-        ]
-        polygon(self.screen, self.color, (coords), width=0)
+        width = 2
+        if (self.strike_back):
+            coords = [
+                (self.x, self.y),
+                (self.x-(self.f_power+2)*math.cos(self.an),
+                self.y-(self.f_power+2)*math.sin(self.an)),
+                (self.x-(self.f_power+2)*math.cos(self.an)-width*math.sin(self.an),
+                self.y-(self.f_power+2)*math.sin(self.an)+width*math.cos(self.an)),
+                (self.x-width*math.sin(self.an), self.y+width*math.cos(self.an))
+            ]
+        else:
+            coords = [
+                (self.x, self.y),
+                (self.x+(self.f_power+2)*math.cos(self.an),
+                self.y+(self.f_power+2)*math.sin(self.an)),
+                (self.x+(self.f_power+2)*math.cos(self.an)+width*math.sin(self.an),
+                self.y+(self.f_power+2)*math.sin(self.an)-width*math.cos(self.an)),
+                (self.x+width*math.sin(self.an), self.y-width*math.cos(self.an))
+            ]
+        polygon(self.surface, colors.RED1, (coords), width=0)
 
     def fire(self):
         '''передаёт скорость в момент выстрела пуле'''
         pass
 
-    def draw(self):
+    def draw(self, groups):
         '''в зависимости от состояния, тут либо отрисовка силы заряда, либо орисовка пули/снаряда'''
         if self.tagetting_state:
             self.draw_power_bar()
         elif self.fire_state:
-            self.draw_bullet()
+            self.draw_bullet(groups)
         else:
             pass
 
-    def draw_bullet(self): #рисуется пуля, при этом скорости тут же меняются
+    def draw_bullet(self, groups): #рисуется пуля, при этом скорости тут же меняются
         pass
 
-    def hit(self, bricks, worms): #проверка столкновения с блоками и червяками
+    def hit(self, groups): #проверка столкновения с блоками и червяками
         pass
 
 
 
 class Gun(Weapon):
-    def get_angle(self, x, y):
+    def __init__(self, surface):
+        super().__init__(surface)
+        master_size=(int(c.sprite_width),int(c.sprite_height/2))        
+        img = pg.image.load(c.gun_image)
+        self.master_surf = pg.transform.scale(img, master_size)
+        self.col_x = self.x
+        self.col_y = self.y
+
+
+    def get_angle(self, worm, x, y, groups):
         '''так как это ружьё, то будет сразу выстрел, а выстрел, вызванный отпусканием мыши, далее проигнорируется'''
-        self.an = math.atan((self.y-y) / (self.x-x))
+        super().get_angle(worm, x, y, groups)
         self.fire()
 
-    def draw_bullet(self):
-        width = 3
+    def draw_bullet(self, groups):
+        width = 1
         coords = [
             (self.x, self.y),
             (self.x+(10)*math.cos(self.an),
@@ -100,101 +154,163 @@ class Gun(Weapon):
              self.y+(10)*math.sin(self.an)-width*math.cos(self.an)),
             (self.x+width*math.sin(self.an), self.y-width*math.cos(self.an))
         ]
+        if self.shoot_up:
+            self.col_x = self.x
+            self.col_y = self.y
+        else:
+            self.col_x = (self.x+(10)*math.cos(self.an)+self.x+(10)*math.cos(self.an)+width*math.sin(self.an))/2
+            self.col_y = (self.y+(10)*math.sin(self.an)+self.y+(10)*math.sin(self.an)-width*math.cos(self.an))/2
         self.x += self.vx
         self.y += self.vy
-        self.vy -= 0.3 #пока просто тестовое значение
-        polygon(self.screen, colors.YELLOW1, (coords), width=0)
+        polygon(self.surface, colors.YELLOW1, (coords), width=0)
+        if (self.fire_state):
+            self.hit(groups)
 
     def fire(self):
         if (not self.fire_state):
-            self.vx = 200 * math.cos(self.an)/2
-            self.vy = -200 * math.sin(self.an)/2
+            speed = 20
+            if (self.strike_back):
+                self.vx = -speed * math.cos(self.an)
+                self.vy = -speed * math.sin(self.an)
+            else:
+                self.vx = speed * math.cos(self.an)
+                self.vy = speed * math.sin(self.an)
+            if self.vy < 0:
+                self.shoot_up = True
+            else:
+                self.shoot_up = False
             self.f_power = 10
             self.tagetting_state = False
             self.fire_state = True
 
-    def hit(self, bricks, worms):
+    def hit(self, groups):
         #вылет за экран
-        if self.x > c.screen_width + 50 or self.x < c.screen_width - 50 or self.y > c.screen_height + 50 or self.y < c.screen_height:
-            self.fire_state = False        
+        if self.x > c.screen_width + 50 or self.x <  - 50 or self.y > c.screen_height + 50 or self.y < -50:
+            self.fire_state = False 
+            self.active_worm = []       
         else:
             #попадание по червяку, отнимает у него одну жизнь
-            for worm in worms:
-                if (worm.rect.left < self.x < worm.rect.right and worm.rect.top < self.y < worm.rect.bottom):
-                    worm.lives -= 1
-                    self.fire_state = False
-                    return
             #попадание по блоку, убирает блок из списка блоков
-            for brick in bricks:
-                if (brick.rect.left < self.x < brick.rect.right and brick.rect.top < self.y < brick.rect.bottom):
-                    bricks.pop(bricks.index(brick))
-                    self.fire_state = False
-                    return
+            
+            i = int(self.col_x / c.sprite_width)
+            if (i > 0 and i <= len(groups)):
+                g = groups[i - 1]
+                sp_list = g.sprites()
+                for sp in sp_list:
+                    if sp.rect.collidepoint(self.col_x, self.col_y):
+                        if sp.type == 1 or (sp.type == 2 and sp != self.active_worm[0]):
+                            if sp.type == 1:
+                                g.remove(sp)
+                            elif sp.type == 2:
+                                sp.lives -= 1
+                                if (sp.lives == 0):
+                                    self.killed_worms.append(sp)
+                                sp.update_image = True
+                            self.fire_state = False
+                            self.active_worm = []
+                            return
 
 class Bazooka(Weapon):
     def __init__(self, surface):
-        super().__init__(self, surface)
+        super().__init__(surface)
 
         #координаты центра передней части снаряда для удобства (см. draw_bullet)
         self.col_x = self.x
         self.col_y = self.y
 
-        self.range = 2500 #радиус поражения в квадрате
+        self.range = 20
 
-    def draw_bullet(self):
-        width = 20
+        
+        master_size=(int(c.sprite_width),int(c.sprite_height/2))
+        
+        img = pg.image.load(c.gun2_image)
+        self.master_surf = pg.transform.scale(img, master_size)
+
+        
+
+
+    def draw_bullet(self, groups):
+        width = 5
         coords = [
             (self.x, self.y),
-            (self.x+(50)*math.cos(self.an),
-             self.y+(50)*math.sin(self.an)),
-            (self.x+(50)*math.cos(self.an)+width*math.sin(self.an),
-             self.y+(50)*math.sin(self.an)-width*math.cos(self.an)),
+            (self.x+(10)*math.cos(self.an),
+             self.y+(10)*math.sin(self.an)),
+            (self.x+(10)*math.cos(self.an)+width*math.sin(self.an),
+             self.y+(10)*math.sin(self.an)-width*math.cos(self.an)),
             (self.x+width*math.sin(self.an), self.y-width*math.cos(self.an))
         ]
-        self.col_x = (self.x+(50)*math.cos(self.an)+self.x+(50)*math.cos(self.an)+width*math.sin(self.an))/2
-        self.col_y = (self.y+(50)*math.sin(self.an)+self.y+(50)*math.sin(self.an)-width*math.cos(self.an))/2
+        if self.shoot_up:
+            self.col_x = self.x
+            self.col_y = self.y
+        else:
+            self.col_x = (self.x+(10)*math.cos(self.an)+self.x+(10)*math.cos(self.an)+width*math.sin(self.an))/2
+            self.col_y = (self.y+(10)*math.sin(self.an)+self.y+(10)*math.sin(self.an)-width*math.cos(self.an))/2
         self.x += self.vx
-        self.y += self.vy
-        self.an = math.atan(self.vy / self.vx) #не уверен, правильно ли так будет, это для наклона в воздухе
-        polygon(self.screen, colors.GREEN, (coords), width=0)
+        self.y += self.vy        
+        self.vy += 0.03
+        self.an = math.atan(self.vy / self.vx)
+        polygon(self.surface, colors.GREEN, (coords), width=0)
+        self.hit(groups)
 
     def fire(self):
         if (not self.fire_state):
-            self.vx = self.f_power * math.cos(self.an)/2
-            self.vy = - self.f_power * math.sin(self.an)/2
+            if (self.strike_back):
+                self.vx = -self.f_power * math.cos(self.an)/10
+                self.vy = -self.f_power * math.sin(self.an)/10
+            else:
+                self.vx = self.f_power * math.cos(self.an)/10
+                self.vy = self.f_power * math.sin(self.an)/10
             self.f_power = 10
+            if self.vy < 0:
+                self.shoot_up = True
+            else:
+                self.shoot_up = False
             self.tagetting_state = False
             self.fire_state = True
-
-    def hit(self, bricks, worms):
+    def hit(self, groups):
         #вылет за экран
-        if self.x > c.screen_width + 50 or self.x < c.screen_width - 50 or self.y > c.screen_height + 50 or self.y < c.screen_height:
+        if self.x > c.screen_width + 50 or self.x <  - 50 or self.y > c.screen_height + 50:
             self.fire_state = False
+            self.active_worm = []
         else:
-            #попадание по червяку,отнимает жизни у всех червей по близости, а также убирает все блоки по близости из списка блоков
-            for worm in worms:
-                if (worm.rect.left < self.col_x < worm.rect.right and worm.rect.top < self.col_y < worm.rect.bottom):
-                    for close_worm in worms:
-                        if close_worm != worm and (worm.rect.centerx - close_worm.rect.centerx)**2 + (worm.rect.centery - close_worm.rect.centery)**2 < self.range:
-                            close_worm.lives -=1                        
-                    for close_brick in bricks:
-                        if (worm.rect.centerx - close_brick.rect.centerx)**2 + (worm.rect.centery - close_brick.rect.centery)**2 < self.range:
-                            bricks.pop(bricks.index(close_brick))
-                worm.lives -= 1
-                self.fire_state = False
-                return
-            #попадание по блоку, отнимает жизни у всех червей поблизости и убирает все блоки по близости из списка блоков
-            for brick in bricks:
-                if (brick.rect.left < self.col_x < brick.rect.right and brick.rect.top < self.col_y < brick.rect.bottom):
-                    for close_worm in worms:
-                        if (brick.rect.centerx - close_worm.rect.centerx)**2 + (brick.rect.centery - close_worm.rect.centery)**2 < self.range:
-                            close_worm.lives -=1
-                    for close_brick in bricks:
-                        if close_brick != brick and (brick.rect.centerx - close_brick.rect.centerx)**2 + (brick.rect.centery - close_brick.rect.centery)**2 < self.range:
-                            bricks.pop(bricks.index(close_brick))
-                bricks.pop(bricks.index(brick))
-                self.fire_state = False
-                return        
+            # прямое попадание снимет червяку 2 жизни, попадание в область взрыва снимет 1 жизнь червяку или уберёт блок
+            i = int(self.col_x / c.sprite_width)
+            if (i > 0 and i <= len(groups)):
+                g = groups[i - 1]
+                sp_list = g.sprites()
+                for sp in sp_list:
+                    if sp.rect.collidepoint(self.col_x, self.col_y):
+                        if (sp.type == 1 or sp.type == 2) and (sp != self.active_worm[0] or (self.shoot_up and self.vy > 0)):
+                            if sp.type == 2:
+                                sp.lives -= 1
+                            self.active_worm = []
+                            self.fire_state = False
+                            x = self.col_x - self.range
+                            y = self.col_y - self.range
+                            county = 0
+                            while(county < 3):
+                                countx = 0
+                                while(countx < 3):
+                                    k = int((x + self.range*countx) / c.sprite_width)
+                                    if (k > 0 and k <= len(groups)):
+                                        g1 = groups[k - 1]
+                                        sp1_list = g1.sprites()
+                                        for sp1 in sp1_list:
+                                            if sp1.rect.collidepoint(x + self.range*countx, y + self.range*county):
+                                                if sp1.type == 1 or sp1.type == 2:
+                                                    if sp1.type == 1:
+                                                        g1.remove(sp1)
+                                                    else:
+                                                        if (sp1.lives != 0):
+                                                            sp1.lives -= 1
+                                                        if (sp1.lives == 0):
+                                                            self.killed_worms.append(sp1)
+                                                        sp1.update_image = True
+
+                                                    break
+                                    countx += 1
+                                county += 1
+                            return       
     
 
 
