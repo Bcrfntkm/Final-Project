@@ -37,8 +37,13 @@ class Weapon:
         self.fire_state = False
 
 
-    def get_angle(self, x, y):
+    def get_pos(self, worm):
+        self.x = worm.rect.centerx
+        self.y = worm.rect.centery
+
+    def get_angle(self, worm, x, y):
         '''планируется, что будут получаться координаты из прицеливания'''
+        self.get_pos(worm)
         self.an = math.atan((self.y-y) / (self.x-x))
         self.tagetting_state = True
         
