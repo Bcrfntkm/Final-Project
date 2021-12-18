@@ -163,10 +163,8 @@ class Worm(Game):
     #                     self.players[self.selected_player].push_event(type, pos)
     def set_gun(self):
             self.selected_weapon=0
-            self.players[self.selected_player].set_weapon_active_slave(self.weapons[self.selected_weapon])
     def set_bomb(self):
             self.selected_weapon=1
-            self.players[self.selected_player].set_weapon_active_slave(self.weapons[self.selected_weapon])
 
     def handle_mouse_event(self,type, pos):
         """диспетчер событий mouse"""

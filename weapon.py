@@ -4,7 +4,6 @@ import pygame as pg
 from pygame.draw import *
 import math
 import config as c
-from worm import Player as pl
 
 
 '''
@@ -226,6 +225,9 @@ class Bazooka(Weapon):
         img = pg.image.load(c.gun2_image)
         self.master_surf = pg.transform.scale(img, master_size)
 
+        self.flame_idx = 1
+        self.flame_length = 3
+
         
 
 
@@ -250,6 +252,26 @@ class Bazooka(Weapon):
         self.vy += 0.03
         self.an = math.atan(self.vy / self.vx)
         polygon(self.surface, colors.GREEN, (coords), width=0)
+        self.flame_length += self.flame_idx
+        if self.flame_length == 3 or self.flame_length == 6:
+            self.flame_idx = - self.flame_idx
+        if not self.strike_back:
+            coords2 = [
+                (self.x, self.y),
+                ((self.x+(-self.flame_length)*math.cos(self.an)+self.x+(-self.flame_length)*math.cos(self.an)+width*math.sin(self.an))/2, 
+                (self.y+(-self.flame_length)*math.sin(self.an)+self.y+(-self.flame_length)*math.sin(self.an)-width*math.cos(self.an))/2),
+                (self.x+width*math.sin(self.an), self.y-width*math.cos(self.an))
+            ]
+        else:
+            coords2 = [
+                (self.x+(10)*math.cos(self.an),
+                self.y+(10)*math.sin(self.an)),
+                ((self.x+(10+self.flame_length)*math.cos(self.an)+self.x+(10+self.flame_length)*math.cos(self.an)+width*math.sin(self.an))/2, 
+                (self.y+(10+self.flame_length)*math.sin(self.an)+self.y+(10+self.flame_length)*math.sin(self.an)-width*math.cos(self.an))/2),
+                (self.x+(10)*math.cos(self.an)+width*math.sin(self.an),
+                self.y+(10)*math.sin(self.an)-width*math.cos(self.an))
+            ]
+        polygon(self.surface, colors.YELLOW2, (coords2), width=0)
         self.hit(groups)
 
     def fire(self):
