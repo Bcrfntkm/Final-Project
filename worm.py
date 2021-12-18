@@ -122,8 +122,7 @@ class Player(Master):
         for i in range(len(self.slaves)):
                 self.slaves[i].set_weapon(weapon)
     def set_weapon_active_slave(self,weapon):
-        if len(self.slaves):
-            self.slaves[self.selected_slave].set_weapon(weapon)
+        self.slaves[self.selected_slave].set_weapon(weapon)
     def activate(self,On):
         size=len(self.slaves)
         if size:
@@ -359,7 +358,7 @@ class Worm(Game):
                 self.selected_player=self.selected_player^1                
                 self.players[self.selected_player].activate(True)
     def weapon_update(self):
-        if len(self.players):
+        if self.is_game_running:
             self.players[self.selected_player].set_weapon_active_slave(self.weapons[self.selected_weapon])
             self.players[self.selected_player].slaves[self.players[self.selected_player].selected_slave].update_image = True
 
