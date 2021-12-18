@@ -386,7 +386,7 @@ class Worm(Game):
         if (self.time_left <= 5):
             color = colors.RED2
         textsurface1 = self.score_text.render(str(self.time_left), False, color)
-        self.surface.blit(textsurface1,(60, 150))
+        self.surface.blit(textsurface1,(cfg.font_size * 4, 150))
         if (self.time_left == 0):
             self.players[self.selected_player].activate(False)
             self.selected_player=self.selected_player^1                
@@ -411,7 +411,6 @@ class Worm(Game):
              s.gameover.play()
              self.show_message('PLAYER 2- WINNER!!!', centralized=True)
              self.is_game_running = False # стоп игра
-             s.gameover.play()
            #  self.game_over = True
         if not len(self.players[1].slaves):
             s.gameover.play()
