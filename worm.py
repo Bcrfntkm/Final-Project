@@ -160,6 +160,9 @@ class Worm(Game):
         self.weapons=[]
         self.selected_weapon=0
         self.fire_start = False
+        self.time_left = cfg.round_time
+        self.start_time = 0
+        self.score_text = pg.font.SysFont(cfg.font_name, int(cfg.font_size*1.5))
         self.create_objects() # вызов для создания всех объектов игры
     def key_event(self, type, key):
             self.players[self.selected_player].push_event(type, key)
@@ -318,8 +321,10 @@ class Worm(Game):
                 # переносим в bad_slaves
                 self.players[player].kill_slave(sp)
                 self.players[player ^ 1].stack_group.add(sp)
+                self.start_time = pg.time.get_ticks()
             if player==self.selected_player:
                 self.players[player].activate(True)
+
     def collide_players(self):
         #сравниваем группы и удаляем того, кто напоролся на противника.
         dict=pg.sprite.groupcollide(self.players[self.selected_player].slaves_group,
@@ -335,6 +340,7 @@ class Worm(Game):
                 self.selected_player=self.selected_player^1
                 self.players[self.selected_player].stack_group.add(sp)
                 self.players[self.selected_player].activate(True)
+                self.start_time = pg.time.get_ticks()
                 s.impact.play()
     def kill_players(self, player):
         #берёт список убитых червяков из оружия и обрабатывает его
@@ -364,15 +370,38 @@ class Worm(Game):
                 self.players[self.selected_player].activate(False)
                 self.selected_player=self.selected_player^1                
                 self.players[self.selected_player].activate(True)
+                self.start_time = pg.time.get_ticks()
     def weapon_update(self):
         if self.is_game_running:
             self.players[self.selected_player].set_weapon_active_slave(self.weapons[self.selected_weapon])
             self.players[self.selected_player].slaves[self.players[self.selected_player].selected_slave].update_image = True
 
+    def timer_update(self):
+        '''показывает время до конца хода, а также передаёт ход по истечении'''
+        if (self.start_time != 0 and not self.fire_start):
+            self.time_left = cfg.round_time - int((pg.time.get_ticks()-self.start_time)/1000)
+        textsurface = self.score_text.render('Time:', False, colors.WHITE)
+        self.surface.blit(textsurface,(0, 150))
+        color = colors.GREEN2
+        if (self.time_left <= 5):
+            color = colors.RED2
+        textsurface1 = self.score_text.render(str(self.time_left), False, color)
+        self.surface.blit(textsurface1,(60, 150))
+        if (self.time_left == 0):
+            self.players[self.selected_player].activate(False)
+            self.selected_player=self.selected_player^1                
+            self.players[self.selected_player].activate(True)
+            self.start_time = pg.time.get_ticks()
+
+
+
 
     def update(self):
         # выход сразу, если игра не запущена (on_play/on_quit)
         if not self.is_game_running:         return
+        
+        if self.start_time == 0:
+            self.start_time = pg.time.get_ticks()
 
         if self.start_level:
             self.start_level = False
@@ -392,6 +421,7 @@ class Worm(Game):
         #self.handle_ball_collisions()        
         self.weapon_update()
         self.block_movement()
+        self.timer_update()
         self.collide_players() #ищем столкновения между червями разных игроков
         # ищем столкновения между червями разных игроков и водой
         self.collide_player_water(self.selected_player)

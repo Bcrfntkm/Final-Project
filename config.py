@@ -34,6 +34,8 @@ font_size = 15
 
 effect_duration = 20
 
+round_time = 15
+
 sounds_effects = dict(
     brick_hit='sound_effects/brick_hit.wav',
     effect_done='sound_effects/effect_done.wav',
