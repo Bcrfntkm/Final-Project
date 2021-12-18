@@ -14,6 +14,8 @@ from button import Button
 from game import Game
 from text_object import TextObject
 import weapon as wp
+import sound as s
+
 groups=[]
 class Weapon(Master):
     def __init__(self,master_file,master_size,
@@ -53,6 +55,7 @@ class Player(Master):
         slave.lives=0
         self.bad_slaves.append(slave)
         self.slaves.remove(slave)
+        s.dead_worm.play()
     def worms_rnd(self):
         for sp in self.slaves:
             self.stack_group.remove(sp)
@@ -86,11 +89,13 @@ class Player(Master):
                     if i:
                         groups[i].remove(worm)
                         groups[i-1].add(worm)
+                        s.walk_left.play()
                 elif event[1] == pg.K_RIGHT:
                     worm.key=True #right
                     if i < len(groups)-1:
                         groups[i].remove(worm)
                         groups[i+1].add(worm)
+                        s.walk_right.play()
                 elif event[1] == pg.K_UP:
                     if (len(self.slaves) > 1):
                         prev = self.selected_slave
@@ -99,6 +104,7 @@ class Player(Master):
                         self.slaves[self.selected_slave].selected = True                        
                         self.slaves[prev].update_image = True
                         self.slaves[self.selected_slave].update_image = True
+                        s.select_worm.play()
                 elif event[1] == pg.K_DOWN:
                     if (len(self.slaves) > 1):
                         prev = self.selected_slave
@@ -111,6 +117,7 @@ class Player(Master):
                         self.slaves[self.selected_slave].selected = True                        
                         self.slaves[prev].update_image = True
                         self.slaves[self.selected_slave].update_image = True
+                        s.select_worm.play()
 
 
     def draw(self,surf):
@@ -142,7 +149,6 @@ class Worm(Game):
                       cfg.screen_height,
                       cfg.background_image,
                       cfg.frame_rate)
-        self.sound_effects = {name: pg.mixer.Sound(sound) for name, sound in cfg.sounds_effects.items()}
         self.lives = cfg.initial_lives
         self.menu_buttons = []  #список кнопок для удаления из Game.objects[]
         self.is_game_running = False
@@ -169,7 +175,7 @@ class Worm(Game):
     def handle_mouse_event(self,type, pos):
         """диспетчер событий mouse"""
         for b in self.menu_buttons:
-            if b.bounds.collidepoint(pos[0], pos[1]):
+            if b.bounds.collidepoint(pos[0], pos[1]):                
                 b.handle_mouse_event(type,pos)
                 return
         if type in (pg.MOUSEBUTTONDOWN,
@@ -194,6 +200,7 @@ class Worm(Game):
                 self.start_level = True
                 self.players[0].worms_rnd()
                 self.players[1].worms_rnd()
+                s.team_drop.play()
         def on_quit(button):
             # нажата левая кнопка мыши на кнопке Quit
             self.game_over = True
@@ -306,6 +313,7 @@ class Worm(Game):
         dict = pg.sprite.spritecollide(self.water_spr, self.players[player].slaves_group, True, False)
         if len(dict):
             for sp in dict:
+                s.splash.play()
                 sp.kill()  # удаляем из всех групп
                 # переносим в bad_slaves
                 self.players[player].kill_slave(sp)
@@ -327,6 +335,7 @@ class Worm(Game):
                 self.selected_player=self.selected_player^1
                 self.players[self.selected_player].stack_group.add(sp)
                 self.players[self.selected_player].activate(True)
+                s.impact.play()
     def kill_players(self, player):
         #берёт список убитых червяков из оружия и обрабатывает его
         for weapon in self.weapons:
@@ -370,10 +379,13 @@ class Worm(Game):
             self.show_message('GET READY!', centralized=True)
 
         if not len(self.players[0].slaves):
+             s.gameover.play()
              self.show_message('PLAYER 2- WINNER!!!', centralized=True)
              self.is_game_running = False # стоп игра
+             s.gameover.play()
            #  self.game_over = True
         if not len(self.players[1].slaves):
+            s.gameover.play()
             self.show_message('PLAYER 1- WINNER!!!', centralized=True)
             self.is_game_running = False  # стоп игра
            # self.game_over = True

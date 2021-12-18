@@ -3,6 +3,7 @@ import pygame
 from game_object import GameObject
 from text_object import TextObject
 import config as cfg
+import sound as s
 
 class Button(GameObject):
     def __init__(self, x, y, w, h, text, on_click=lambda x: None, padding=0):
@@ -40,7 +41,7 @@ class Button(GameObject):
 
 #pygame.MOUSEBUTTONDOWN
     def handle_mouse_down(self, pos):
-        if self.bounds.collidepoint(pos):
+        if self.bounds.collidepoint(pos):            
             self.state = 'pressed'
 
 #pygame.MOUSEBUTTONUP
@@ -52,5 +53,7 @@ class Button(GameObject):
     def handle_mouse_event(self, type, pos):
 #        if    type == pygame.MOUSEMOTION:           self.handle_mouse_move(pos)
 #        elif type == pygame.MOUSEBUTTONDOWN:self.handle_mouse_down(pos)
-        if type == pygame.MOUSEBUTTONDOWN:self.handle_mouse_down(pos)
+        if type == pygame.MOUSEBUTTONDOWN:
+            self.handle_mouse_down(pos)
+            s.click.play()
         elif type == pygame.MOUSEBUTTONUP:       self.handle_mouse_up(pos)

@@ -4,6 +4,7 @@ import pygame as pg
 from pygame.draw import *
 import math
 import config as c
+import sound as s
 
 
 '''
@@ -85,7 +86,10 @@ class Weapon:
     def draw_power_bar(self):
         '''полоска,отображающая силу заряда выстрела (для базуки, например)'''
         if (self.f_power < 50):
+            s.rocket_powerup.play()
             self.f_power += 1
+        else:
+            s.rocket_powerup.stop()
         width = 2
         if (self.strike_back):
             coords = [
@@ -167,6 +171,7 @@ class Gun(Weapon):
 
     def fire(self):
         if (not self.fire_state):
+            s.gun_fire.play()
             speed = 20
             if (self.strike_back):
                 self.vx = -speed * math.cos(self.an)
@@ -232,6 +237,7 @@ class Bazooka(Weapon):
 
 
     def draw_bullet(self, groups):
+        s.rocket_fly.play()
         width = 5
         coords = [
             (self.x, self.y),
@@ -276,6 +282,7 @@ class Bazooka(Weapon):
 
     def fire(self):
         if (not self.fire_state):
+            s.rocket_powerup.stop()
             if (self.strike_back):
                 self.vx = -self.f_power * math.cos(self.an)/10
                 self.vy = -self.f_power * math.sin(self.an)/10
@@ -289,11 +296,13 @@ class Bazooka(Weapon):
                 self.shoot_up = False
             self.tagetting_state = False
             self.fire_state = True
+            s.rocket_lauch.play()
     def hit(self, groups):
         #вылет за экран
         if self.x > c.screen_width + 50 or self.x <  - 50 or self.y > c.screen_height + 50:
             self.fire_state = False
             self.active_worm = []
+            s.rocket_fly.stop()
         else:
             # прямое попадание снимет червяку 2 жизни, попадание в область взрыва снимет 1 жизнь червяку или уберёт блок
             i = int(self.col_x / c.sprite_width)
@@ -332,6 +341,8 @@ class Bazooka(Weapon):
                                                     break
                                     countx += 1
                                 county += 1
+                            s.rocket_fly.stop()
+                            s.explosion.play()
                             return       
     
 
