@@ -7,31 +7,31 @@ import config as c
 import sound as s
 
 
-'''
-Пока от прицеливания не придут координаты прицела, все дествия игнорируются. Класс понимает это через tagetting_state и fire_state
-get_angle получает координаты по нажатию кнопки мыши в прицеливании, после чего targetting_state = True (в Gun сразу fire)
-Пока кнопка мыши нажата, вызывается draw_power_bar (через draw), но для Gun сразу произойдёт выстрел 
-Когда произойдёт выстрел, вызывается fire, и targetting_state = False, fire_state = True
-Перемещение пули и отрисовка совмещены в draw_bullet (которая вызывается через draw)
-Пока fire_state = True, будет проверка на вылет за пределы экрана и столкновение с кирпичиками и червяками (hit)
-При вылете за пределы или попаданию куда либо fire_state = False. Класс снова игнорирует все действия до следующей передачи координат
-
-'''
-
 class Weapon:
     def __init__(self, surface):
-        '''класс оружия будет хранить в себе координаты, которые сначала будут координатами пушки, а потом координатами "пули"
-        скорости пули
-        цвет (тоже будет для пушки и пули менятся)
-        сила заряда выстрела (для ружья не используется)
-        угол выстрела'''
+        '''
+        основной класс оружия, отвечающий за его отрисовку и взаимодействие
+
+        x, y - положение полоски мощности/снаряда
+        vx, vy - скорость снаряда
+        f_power - мощность выстрела (базука)
+        an - угол
+        col_x, col_y - используются вместо x, y в завимости от направления выстрела
+        strike_back, shoot_up - направление выстрела
+        targetting_state, fire_state - состояния зарядки оружия и полёта снаряда
+        active_worm - хранит в себе червя, совершившего выстрел
+        killed_worms - хранит червей, которых убило оружие
+        '''
         self.surface = surface
         self.x = 0
         self.y = 0
         self.vx = 0
         self.vy = 0
-        self.f_power = 10
+        self.f_power = 10  
         self.an = 1
+
+        self.col_x = self.x
+        self.col_y = self.y
 
         self.strike_back = False
 
@@ -45,19 +45,27 @@ class Weapon:
 
 
     def fire_end(self):
+        '''
+        показывает, завершён ли выстрел
+        '''
         if (not self.tagetting_state and not self.fire_state):
             return True
         else:
             return False
 
     def get_pos(self, worm):
+        '''
+        берёт координаты червя
+        '''
         self.x = worm.rect.centerx
         self.y = worm.rect.centery
 
     def get_angle(self, worm, x, y, groups):
+        '''
+        
+        '''
         if (self.tagetting_state or self.fire_state):
             return
-        '''планируется, что будут получаться координаты из прицеливания'''
         self.killed_worms = []
         self.get_pos(worm)
         if (self.x - x > 0):
@@ -84,7 +92,9 @@ class Weapon:
         
 
     def draw_power_bar(self):
-        '''полоска,отображающая силу заряда выстрела (для базуки, например)'''
+        '''
+        отрисовка полоски,отображающей силу заряда выстрела (для базуки, например)
+        '''
         if (self.f_power < 50):
             s.rocket_powerup.play()
             self.f_power += 1
@@ -112,11 +122,15 @@ class Weapon:
         polygon(self.surface, colors.RED1, (coords), width=0)
 
     def fire(self):
-        '''передаёт скорость в момент выстрела пуле'''
+        '''
+        передаёт скорость в момент выстрела пуле
+        '''
         pass
 
     def draw(self, groups):
-        '''в зависимости от состояния, тут либо отрисовка силы заряда, либо орисовка пули/снаряда'''
+        '''
+        в зависимости от состояния, тут либо отрисовка силы заряда, либо орисовка пули/снаряда
+        '''
         if self.tagetting_state:
             self.draw_power_bar()
         elif self.fire_state:
@@ -124,30 +138,45 @@ class Weapon:
         else:
             pass
 
-    def draw_bullet(self, groups): #рисуется пуля, при этом скорости тут же меняются
+    def draw_bullet(self, groups):
+        '''
+        отрисовка пули, а также проверка на столкновения через hit()
+        '''
         pass
 
-    def hit(self, groups): #проверка столкновения с блоками и червяками
+    def hit(self, groups):
+        '''
+        взаимодействие снаряда с блоками и червями
+        '''
         pass
 
 
 
 class Gun(Weapon):
     def __init__(self, surface):
+        '''
+        класс ружья
+
+        master_surf - спрайт ружья, отображающийся над червём
+        '''
         super().__init__(surface)
         master_size=(int(c.sprite_width),int(c.sprite_height/2))        
         img = pg.image.load(c.gun_image)
         self.master_surf = pg.transform.scale(img, master_size)
-        self.col_x = self.x
-        self.col_y = self.y
 
 
     def get_angle(self, worm, x, y, groups):
-        '''так как это ружьё, то будет сразу выстрел, а выстрел, вызванный отпусканием мыши, далее проигнорируется'''
+        '''
+        передаёт угол выстрела классу        
+        так как это ружьё, то будет сразу выстрел
+        '''
         super().get_angle(worm, x, y, groups)
         self.fire()
 
     def draw_bullet(self, groups):
+        '''
+        отрисовка пули, а также проверка на столкновения через hit()
+        '''
         width = 1
         coords = [
             (self.x, self.y),
@@ -170,6 +199,9 @@ class Gun(Weapon):
             self.hit(groups)
 
     def fire(self):
+        '''
+        передаёт скорость в момент выстрела пуле
+        '''
         if (not self.fire_state):
             s.gun_fire.play()
             speed = 20
@@ -188,6 +220,11 @@ class Gun(Weapon):
             self.fire_state = True
 
     def hit(self, groups):
+        '''
+        проверка на вылет за экран
+        взаимодействие снаряда с блоками и червями
+        '''
+
         #вылет за экран
         if self.x > c.screen_width + 50 or self.x <  - 50 or self.y > c.screen_height + 50 or self.y < -50:
             self.fire_state = False 
@@ -216,11 +253,14 @@ class Gun(Weapon):
 
 class Bazooka(Weapon):
     def __init__(self, surface):
-        super().__init__(surface)
+        '''
+        класс базуки
 
-        #координаты центра передней части снаряда для удобства (см. draw_bullet)
-        self.col_x = self.x
-        self.col_y = self.y
+        master_surf - спрайт базуки, отображающийся над червём
+        range - половина стороны квадрата, в котором происходит взрыв
+        flam_idx, flame_length - отвечают за отрисовку "пламени" снаряда
+        '''
+        super().__init__(surface)
 
         self.range = 20
 
@@ -237,6 +277,9 @@ class Bazooka(Weapon):
 
 
     def draw_bullet(self, groups):
+        '''
+        отрисовка снаряда, а также проверка на столкновения через hit()
+        '''
         s.rocket_fly.play()
         width = 5
         coords = [
@@ -281,6 +324,9 @@ class Bazooka(Weapon):
         self.hit(groups)
 
     def fire(self):
+        '''
+        передаёт скорость в момент выстрела снаряду
+        '''
         if (not self.fire_state):
             s.rocket_powerup.stop()
             if (self.strike_back):
@@ -298,6 +344,10 @@ class Bazooka(Weapon):
             self.fire_state = True
             s.rocket_lauch.play()
     def hit(self, groups):
+        '''
+        проверка на вылет за экран, кроме верхней границы
+        взаимодействие снаряда с блоками и червями
+        '''
         #вылет за экран
         if self.x > c.screen_width + 50 or self.x <  - 50 or self.y > c.screen_height + 50:
             self.fire_state = False
