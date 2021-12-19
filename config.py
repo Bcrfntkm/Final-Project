@@ -36,13 +36,6 @@ effect_duration = 20
 
 round_time = 20
 
-sounds_effects = dict(
-    brick_hit='sound_effects/brick_hit.wav',
-    effect_done='sound_effects/effect_done.wav',
-    paddle_hit='sound_effects/paddle_hit.wav',
-    level_complete='sound_effects/level_complete.wav',
-)
-
 button_pictures = {
     'PLAY': 'images/Play.png',
     'QUIT': 'images/Quit.png',

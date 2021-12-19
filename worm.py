@@ -18,25 +18,6 @@ import sound as s
 
 groups = []
 
-
-class Weapon(Master):
-    """
-    Класс оружия, наследуется от класса Master и отвечает за изображение оружия на экране, его физическое взаимодействие
-    с другими объектами, такими как блоки земли и персонажи
-    """
-    def __init__(self, master_file, master_size,
-                 slave_file, slave_size,
-                 pos=(0, 0), slave_number=0):  # pos[0]-ось стека
-        super().__init__(master_file, master_size,
-                         slave_file, slave_size)
-
-    def make_slave(self, pos_begin, pos_end):
-        slave = SlaveBullet(self.slave_surf, pos_begin, type=4)
-        self.slaves.append(slave)
-        self.slaves_group.add(slave)  # для контроля столкновений
-        print(1)
-
-
 class Player(Master):
     """
     Класс, наследуеиый от Master и ответственный за создание массивов персонажей, их взаимодействие друг с другом и
@@ -293,7 +274,7 @@ class Worm(Game):
 
     def create_weapon(self):
         """
-        добавление кнопок оружия на экран меню
+        добавление оружия в класс игры
         """
         self.weapons.append(wp.Gun(self.surface))
         self.weapons.append(wp.Bazooka(self.surface))
@@ -390,7 +371,7 @@ class Worm(Game):
     def collide_player_water(self, player):
         """
         обработка взаимодействия червей с водой
-        player: червь, столкнувшийся с водой
+        player: игрок, чей червь столкнулся с водой
         """
         dict = pg.sprite.spritecollide(self.water_spr, self.players[player].slaves_group, True, False)
         if len(dict):
@@ -435,7 +416,7 @@ class Worm(Game):
     def kill_players(self, player):
         """
         берёт список убитых червяков из оружия и обрабатывает его
-        player: червь, которого нужно удалить из активной игровой зоны
+        player: игрок, чьи черви будут проверяться
         """
         for weapon in self.weapons:
             for worm in weapon.killed_worms:
