@@ -47,7 +47,9 @@ button_pictures = {
     'PLAY': 'images/Play.png',
     'QUIT': 'images/Quit.png',
     'GUN': 'images/Gun.png',
-    'ANOTHER GUN': 'images/Bomb.png'
+    'BAZUKA': 'images/Bazuka.png',
+    'WIN_1': 'images/images/Winner_1.png',
+    'WIN_2': 'images/images/Winner_2.png'
 }
 message_duration = 1
 
