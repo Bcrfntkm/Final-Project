@@ -173,6 +173,7 @@ class Worm(Game):
         self.lives = cfg.initial_lives
         self.menu_buttons = []  # список кнопок для удаления из Game.objects[]
         self.is_game_running = False
+        self.game_is_over = False
         self.players = []
         self.selected_player = 0
         # рассчитываем количество столбцов
@@ -234,7 +235,7 @@ class Worm(Game):
             """
             обработка нажатия кнопки Play
             """
-            if not self.is_game_running:
+            if not self.is_game_running and not self.game_is_over:
                 self.is_game_running = True
                 self.start_level = True
                 self.players[0].worms_rnd()
@@ -493,11 +494,12 @@ class Worm(Game):
             s.gameover.play()
             self.show_message('PLAYER 2- WINNER!!!', centralized=True)
             self.is_game_running = False  # стоп игра
-        #  self.game_over = True
+            self.game_is_over = True
         if not len(self.players[1].slaves):
             s.gameover.play()
             self.show_message('PLAYER 1- WINNER!!!', centralized=True)
             self.is_game_running = False  # стоп игра
+            self.game_is_over = True
         self.weapon_update()
         self.block_movement()
         self.timer_update()
