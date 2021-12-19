@@ -2,7 +2,6 @@ import pygame as pg
 from pygame import surfarray, sprite
 from sprite_group import *
 from masterslave import *
-import numpy as np
 from random import randint
 from datetime import datetime, timedelta
 import time
